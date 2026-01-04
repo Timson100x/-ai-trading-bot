@@ -1,0 +1,50 @@
+{
+  "name": "ai-trading-bot",
+  "version": "1.0.0",
+  "description": "Production-ready AI-powered Solana trading bot with modular strategies",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "pm2:start": "pm2 start ecosystem.config.json",
+    "pm2:stop": "pm2 stop ai-trading-bot",
+    "pm2:restart": "pm2 restart ai-trading-bot",
+    "pm2:logs": "pm2 logs ai-trading-bot",
+    "pm2:monit": "pm2 monit",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "solana",
+    "trading-bot",
+    "ai",
+    "cryptocurrency",
+    "defi",
+    "automated-trading"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "axios": "^1.13.2",
+    "bs58": "^6.0.0",
+    "dotenv": "^17.2.3",
+    "ioredis": "^5.8.2",
+    "pm2": "^6.0.14",
+    "redis": "^5.10.0",
+    "telegraf": "^4.16.3",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
