@@ -8,9 +8,12 @@ import { AIService } from './services/AIService';
 import { TelegramService } from './services/TelegramService';
 import { SmartOrderRoutingService } from './services/SmartOrderRoutingService';
 import { RiskManagementService } from './services/RiskManagementService';
+import { MempoolService } from './services/MempoolService';
 import { SniperStrategy } from './strategies/SniperStrategy';
 import { CopyTradingStrategy } from './strategies/CopyTradingStrategy';
 import { ArbitrageStrategy } from './strategies/ArbitrageStrategy';
+import { ScalpingStrategy } from './strategies/ScalpingStrategy';
+import { LiquidityProvisionStrategy } from './strategies/LiquidityProvisionStrategy';
 import { IStrategy } from './strategies/BaseStrategy';
 import { Trade } from './types';
 
@@ -22,6 +25,7 @@ export class TradingBot {
   private telegramService: TelegramService;
   private sorService: SmartOrderRoutingService;
   private riskService: RiskManagementService;
+  private mempoolService: MempoolService;
   private strategies: Map<string, IStrategy> = new Map();
   private isRunning: boolean = false;
   private healthCheckInterval?: NodeJS.Timeout;
@@ -37,6 +41,7 @@ export class TradingBot {
     this.aiService = new AIService(this.cache);
     this.sorService = new SmartOrderRoutingService(this.cache);
     this.riskService = new RiskManagementService(this.cache, this.aiService);
+    this.mempoolService = new MempoolService(connection, this.cache);
 
     // Initialize strategies
     this.initializeStrategies(connection);
@@ -56,10 +61,14 @@ export class TradingBot {
     const sniper = new SniperStrategy(...strategyArgs);
     const copyTrading = new CopyTradingStrategy(...strategyArgs);
     const arbitrage = new ArbitrageStrategy(...strategyArgs);
+    const scalping = new ScalpingStrategy(...strategyArgs);
+    const liquidityProvision = new LiquidityProvisionStrategy(...strategyArgs);
 
     this.strategies.set(sniper.name, sniper);
     this.strategies.set(copyTrading.name, copyTrading);
     this.strategies.set(arbitrage.name, arbitrage);
+    this.strategies.set(scalping.name, scalping);
+    this.strategies.set(liquidityProvision.name, liquidityProvision);
 
     logger.info(`Initialized ${this.strategies.size} trading strategies`);
   }
@@ -76,6 +85,15 @@ export class TradingBot {
 
       // Start RPC periodic reset
       this.rpcService.startPeriodicReset();
+
+      // Start mempool monitoring if enabled
+      if (Config.MEMPOOL_ANALYSIS_ENABLED) {
+        const monitorAddresses = Config.WHALE_WALLET_ADDRESSES;
+        if (monitorAddresses.length > 0) {
+          await this.mempoolService.startMonitoring(monitorAddresses);
+          logger.info('Mempool monitoring started');
+        }
+      }
 
       // Send startup notification
       await this.telegramService.sendAlert({
@@ -112,6 +130,9 @@ export class TradingBot {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
+
+    // Stop mempool monitoring
+    this.mempoolService.stopMonitoring();
 
     await this.cache.close();
 
@@ -272,7 +293,8 @@ export class TradingBot {
       activeTrades: this.riskService.getActiveTradesCount(),
       strategies: Array.from(this.strategies.keys()),
       riskProfile: this.riskService.getCurrentRiskProfile().name,
-      walletCount: this.walletService.getWalletCount()
+      walletCount: this.walletService.getWalletCount(),
+      mempoolMonitoring: this.mempoolService.getMonitoringStatus()
     };
   }
 }
